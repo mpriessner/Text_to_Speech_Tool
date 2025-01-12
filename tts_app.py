@@ -19,9 +19,16 @@ class TTSWindow(QMainWindow):
     def setup_tts_engine(self):
         """Initialize the text-to-speech engine"""
         try:
-            self.engine = pyttsx3.init()
+            self.engine = pyttsx3.init("sapi5")
             self.voices = self.engine.getProperty('voices')
             print(f"Found {len(self.voices)} voices")
+            
+            # Print detailed voice information
+            for voice in self.voices:
+                print(f"Voice ID: {voice.id}")
+                print(f"Voice Name: {voice.name}")
+                print(f"Voice Languages: {voice.languages}")
+                print("-" * 50)
             
             # Set default voice
             if self.voices:
@@ -31,7 +38,7 @@ class TTSWindow(QMainWindow):
                 print("No voices found")
             
             # Set default rate
-            self.engine.setProperty('rate', 300)
+            self.engine.setProperty('rate', 400)
         except Exception as e:
             print(f"Error initializing TTS engine: {str(e)}")
             self.voices = []
@@ -64,11 +71,11 @@ class TTSWindow(QMainWindow):
         speed_layout = QHBoxLayout()
         speed_label = QLabel("Speed:")
         self.speed_slider = QSlider(Qt.Horizontal)
-        self.speed_slider.setMinimum(50)
-        self.speed_slider.setMaximum(400)
-        self.speed_slider.setValue(300)
+        self.speed_slider.setMinimum(100)
+        self.speed_slider.setMaximum(1000)
+        self.speed_slider.setValue(400)
         self.speed_slider.setTickPosition(QSlider.TicksBelow)
-        self.speed_slider.setTickInterval(50)
+        self.speed_slider.setTickInterval(100)
         self.speed_slider.valueChanged.connect(self.update_speed)
         speed_layout.addWidget(speed_label)
         speed_layout.addWidget(self.speed_slider)
@@ -88,21 +95,38 @@ class TTSWindow(QMainWindow):
         self.lang_combo.clear()
         self.voice_map = {}
         
+        # Define known voice genders
+        female_voices = ['zira', 'hazel', 'hedda', 'female']
+        
         for voice in self.voices:
-            # Extract language from voice name
-            if 'german' in voice.name.lower():
+            # Print raw voice data for debugging
+            print(f"\nProcessing voice:")
+            print(f"ID: {voice.id}")
+            print(f"Name: {voice.name}")
+            
+            # Determine language based on voice properties
+            voice_id_lower = voice.id.lower()
+            voice_name_lower = voice.name.lower()
+            
+            # Check for German voices
+            if any(german_id in voice_id_lower for german_id in ['german', 'deutsch', 'de-de', 'de_']):
                 lang = 'German'
             else:
                 lang = 'English'
-                
+            
             # Add gender information
-            if 'female' in voice.name.lower():
-                lang += ' (Female)'
+            if any(female_name in voice_name_lower for female_name in female_voices):
+                gender = '(Female)'
             else:
-                lang += ' (Male)'
-                
-            self.voice_map[lang] = voice
-            self.lang_combo.addItem(lang)
+                gender = '(Male)'
+            
+            voice_label = f"{lang} {gender}"
+            
+            # Only add if we don't already have this exact voice type
+            if voice_label not in self.voice_map:
+                self.voice_map[voice_label] = voice
+                self.lang_combo.addItem(voice_label)
+                print(f"Added voice: {voice_label} - {voice.name}")
             
         # If no voices found, add default
         if self.lang_combo.count() == 0:
